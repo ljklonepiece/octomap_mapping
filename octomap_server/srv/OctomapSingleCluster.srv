@@ -1,0 +1,5 @@
+sensor_msgs/PointCloud2 cluster
+
+---
+
+visualization_msgs/MarkerArray occupied_markers

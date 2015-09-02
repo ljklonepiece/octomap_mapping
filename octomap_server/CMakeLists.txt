@@ -14,16 +14,29 @@ set(PACKAGE_DEPENDENCIES
   octomap_msgs
   dynamic_reconfigure
   nodelet  
+  
 )
 
 
-find_package(catkin REQUIRED COMPONENTS ${PACKAGE_DEPENDENCIES})
+find_package(catkin REQUIRED COMPONENTS ${PACKAGE_DEPENDENCIES} message_generation)
 
 find_package(PCL REQUIRED QUIET COMPONENTS common sample_consensus io segmentation filters)
 
 find_package(octomap REQUIRED)
 add_definitions(-DOCTOMAP_NODEBUGOUT)
 
+
+add_service_files(
+   FILES
+   OctomapSingleCluster.srv
+ )
+
+generate_messages(
+   DEPENDENCIES
+   geometry_msgs   sensor_msgs   visualization_msgs
+ )
+
+ 
 include_directories(
   include
   ${catkin_INCLUDE_DIRS}
@@ -37,8 +50,8 @@ generate_dynamic_reconfigure_options(cfg/OctomapServer.cfg)
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES ${PROJECT_NAME}
-  CATKIN_DEPENDS ${PACKAGE_DEPENDENCIES}
-  DEPENDS octomap PCL
+  CATKIN_DEPENDS ${PACKAGE_DEPENDENCIES} message_runtime
+  DEPENDS octomap PCL 
 )
 
 set(LINK_LIBS
@@ -50,6 +63,10 @@ set(LINK_LIBS
 add_library(${PROJECT_NAME} src/OctomapServer.cpp src/OctomapServerMultilayer.cpp src/TrackingOctomapServer.cpp)
 target_link_libraries(${PROJECT_NAME} ${LINK_LIBS})
 add_dependencies(${PROJECT_NAME} ${PROJECT_NAME}_gencfg)
+
+add_executable(octomap_server_cluster_node src/OctomapServerSingleCluster.cpp)
+add_dependencies(octomap_server_cluster_node  ${PROJECT_NAME}_generate_messages_cpp)
+target_link_libraries(octomap_server_cluster_node ${PROJECT_NAME} ${LINK_LIBS})
 
 add_executable(octomap_server_node src/octomap_server_node.cpp)
 target_link_libraries(octomap_server_node ${PROJECT_NAME} ${LINK_LIBS})
