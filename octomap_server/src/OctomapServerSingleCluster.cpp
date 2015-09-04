@@ -151,7 +151,7 @@ OctomapServerSingleCluster::OctomapServerSingleCluster(ros::NodeHandle private_n
 
 
   //service to process incoming pcl cluster to be converted into occupancy grid
-  m_octomapClusterService = m_nh.advertiseService(m_nh.resolveName("octomap_cluster"), &OctomapServerSingleCluster::octomapClusterSrv, this);
+  m_octomapClusterService = m_nh.advertiseService(m_nh.resolveName("octomap_cluster_srv"), &OctomapServerSingleCluster::octomapClusterSrv, this);
 
   m_octomapBinaryService = m_nh.advertiseService("octomap_binary", &OctomapServerSingleCluster::octomapBinarySrv, this);
   m_octomapFullService = m_nh.advertiseService("octomap_full", &OctomapServerSingleCluster::octomapFullSrv, this);
@@ -243,7 +243,7 @@ bool OctomapServerSingleCluster::octomapClusterSrv(OctomapSingleCluster::Request
   //
   PCLPointCloud pc; // input cloud for filtering and ground-detection
   pcl::fromROSMsg(req.cluster, pc);
-
+  ROS_INFO("%s, %s", m_worldFrameId.c_str(), req.cluster.header.frame_id.c_str());
   tf::StampedTransform sensorToWorldTf;
   try {
     m_tfListener.lookupTransform(m_worldFrameId, req.cluster.header.frame_id, req.cluster.header.stamp, sensorToWorldTf);
@@ -837,33 +837,6 @@ void OctomapServerSingleCluster::publishCluster(OctomapSingleCluster::Response &
   // call post-traversal hook:
   handlePostNodeTraversal(rostime);
 
-  // finish MarkerArray:
-  if (publishMarkerArray){
-    for (unsigned i= 0; i < occupiedNodesVis.markers.size(); ++i){
-      double size = m_octree->getNodeSize(i);
-
-      occupiedNodesVis.markers[i].header.frame_id = m_worldFrameId;
-      occupiedNodesVis.markers[i].header.stamp = rostime;
-      occupiedNodesVis.markers[i].ns = "map";
-      occupiedNodesVis.markers[i].id = i;
-      occupiedNodesVis.markers[i].type = visualization_msgs::Marker::CUBE_LIST;
-      occupiedNodesVis.markers[i].scale.x = size;
-      occupiedNodesVis.markers[i].scale.y = size;
-      occupiedNodesVis.markers[i].scale.z = size;
-      occupiedNodesVis.markers[i].color = m_color;
-
-
-      if (occupiedNodesVis.markers[i].points.size() > 0)
-        occupiedNodesVis.markers[i].action = visualization_msgs::Marker::ADD;
-      else
-        occupiedNodesVis.markers[i].action = visualization_msgs::Marker::DELETE;
-    }
-
-    //m_markerPub.publish(occupiedNodesVis);
-    response.occupied_markers = occupiedNodesVis;
-  }
-
-
   // finish FreeMarkerArray:
   if (publishFreeMarkerArray){
     for (unsigned i= 0; i < freeNodesVis.markers.size(); ++i){
@@ -889,6 +862,37 @@ void OctomapServerSingleCluster::publishCluster(OctomapSingleCluster::Response &
     m_fmarkerPub.publish(freeNodesVis);
 
   }
+
+
+  // finish MarkerArray:
+  if (publishMarkerArray){
+    for (unsigned i= 0; i < occupiedNodesVis.markers.size(); ++i){
+      double size = m_octree->getNodeSize(i);
+
+      occupiedNodesVis.markers[i].header.frame_id = m_worldFrameId;
+      occupiedNodesVis.markers[i].header.stamp = rostime;
+      occupiedNodesVis.markers[i].ns = "map";
+      occupiedNodesVis.markers[i].id = i;
+      occupiedNodesVis.markers[i].type = visualization_msgs::Marker::CUBE_LIST;
+      occupiedNodesVis.markers[i].scale.x = size;
+      occupiedNodesVis.markers[i].scale.y = size;
+      occupiedNodesVis.markers[i].scale.z = size;
+      occupiedNodesVis.markers[i].color = m_color;
+
+
+      if (occupiedNodesVis.markers[i].points.size() > 0)
+        occupiedNodesVis.markers[i].action = visualization_msgs::Marker::ADD;
+      else
+        occupiedNodesVis.markers[i].action = visualization_msgs::Marker::DELETE;
+    }
+
+    //m_markerPub.publish(occupiedNodesVis);
+    response.occupied_markers = occupiedNodesVis;
+    m_octree->clear();
+  }
+
+
+
 
 
   // finish pointcloud:
@@ -1441,9 +1445,9 @@ std_msgs::ColorRGBA OctomapServerSingleCluster::heightMapColor(double h) {
 int main(int argc, char **argv) 
 {
   ros::init(argc, argv, "octomap_server_node");
-  ros::NodeHandle nh;
+  // ros::NodeHandle nh = ros::NodeHandle("test");
 
-  octomap_server::OctomapServerSingleCluster server(nh);
+  octomap_server::OctomapServerSingleCluster server;
   ros::spin();
   
   return 0;
