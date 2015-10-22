@@ -33,7 +33,7 @@ add_service_files(
 
 generate_messages(
    DEPENDENCIES
-   geometry_msgs   sensor_msgs   visualization_msgs
+   geometry_msgs   sensor_msgs   visualization_msgs nav_msgs
  )
 
  
